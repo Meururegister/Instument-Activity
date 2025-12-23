@@ -1,7 +1,7 @@
 {
-  "name": "MelodyManager - Music Instrument Rental System",
-  "description": "ระบบจัดการยืม-คืนเครื่องดนตรีอัจฉริยะ รองรับการสแกนบาร์โค้ด บันทึกประวัติ และสรุปสถิติด้วย AI",
   "requestFramePermissions": [
     "camera"
-  ]
+  ],
+  "name": "",
+  "description": ""
 }

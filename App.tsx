@@ -9,7 +9,7 @@ import Scanner from './views/Scanner';
 import History from './views/History';
 import { Instrument, BorrowRecord, User, InstrumentStatus, ToastNotification, NotificationType } from './types';
 import { INITIAL_INSTRUMENTS } from './constants';
-import { LogIn, Music, Loader2, AlertCircle } from 'lucide-react';
+import { Music, Loader2 } from 'lucide-react';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -30,124 +30,116 @@ const App: React.FC = () => {
     setNotifications(prev => prev.filter(n => n.id !== id));
   }, []);
 
-  // เสถียรขึ้น: ลำดับการโหลดที่แน่นอน
+  // ระบบโหลดเริ่มต้น - ปรับให้สั้นลงและแม่นยำขึ้น
   useEffect(() => {
-    let currentProgress = 0;
-    const interval = setInterval(() => {
-      currentProgress += 5;
-      if (currentProgress > 100) {
-        clearInterval(interval);
-        setLoadingProgress(100);
-        setTimeout(() => setIsLoading(false), 300);
-      } else {
-        setLoadingProgress(currentProgress);
-      }
-    }, 40);
-
-    return () => clearInterval(interval);
+    const timer = setTimeout(() => {
+      setLoadingProgress(100);
+      setIsLoading(false);
+    }, 800); // โหลดเร็วๆ เพื่อป้องกันการค้าง
+    return () => clearTimeout(timer);
   }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setLoadingProgress(0);
-    
-    let p = 0;
-    const inv = setInterval(() => {
-      p += 20;
-      setLoadingProgress(p);
-      if (p >= 100) {
-        clearInterval(inv);
-        setUser({
-          id: 'admin1',
-          username: 'admin',
-          role: 'admin',
-          name: 'อาจารย์ผู้ดูแลระบบ'
-        });
-        setIsLoading(false);
-        addNotification('เข้าสู่ระบบสำเร็จ!', 'success');
-      }
-    }, 50);
+    setUser({
+      id: 'admin-01',
+      username: 'admin',
+      role: 'admin',
+      name: 'ผู้ดูแลระบบเครื่องดนตรี'
+    });
+    addNotification('เข้าสู่ระบบสำเร็จ ยินดีต้อนรับ', 'success');
   };
 
   const handleLogout = () => {
     setUser(null);
-    addNotification('ออกจากระบบแล้ว', 'info');
+    addNotification('ออกจากระบบเรียบร้อยแล้ว', 'info');
   };
 
   const handleScan = (barcode: string) => {
-    try {
-      const instrument = instruments.find(i => i.barcode === barcode);
-      if (!instrument) {
-        addNotification(`ไม่พบข้อมูล: ${barcode}`, 'error');
-        return;
-      }
+    const instrument = instruments.find(i => i.barcode === barcode);
+    if (!instrument) {
+      addNotification(`ไม่พบข้อมูลสำหรับรหัส: ${barcode}`, 'error');
+      return;
+    }
 
-      if (instrument.status === InstrumentStatus.MAINTENANCE) {
-        addNotification(`${instrument.name} กำลังซ่อมแซม`, 'warning');
-        return;
-      }
+    if (instrument.status === InstrumentStatus.MAINTENANCE) {
+      addNotification(`${instrument.name} กำลังซ่อมบำรุง ไม่สามารถยืมได้`, 'warning');
+      return;
+    }
 
-      if (instrument.status === InstrumentStatus.BORROWED) {
-        setInstruments(prev => prev.map(i => i.id === instrument.id ? { ...i, status: InstrumentStatus.AVAILABLE } : i));
-        setHistory(prev => prev.map(h => (h.instrumentId === instrument.id && h.status === 'active') ? { ...h, status: 'returned', returnDate: new Date().toISOString() } : h));
-        addNotification(`คืนสำเร็จ: ${instrument.name}`, 'success');
-      } else {
-        setInstruments(prev => prev.map(i => i.id === instrument.id ? { ...i, status: InstrumentStatus.BORROWED, lastBorrowedBy: user?.name } : i));
-        const newRecord: BorrowRecord = {
-          id: Date.now().toString(),
-          instrumentId: instrument.id,
-          instrumentName: instrument.name,
-          borrowerName: user?.name || 'Anonymous',
-          borrowDate: new Date().toISOString(),
-          status: 'active'
-        };
-        setHistory(prev => [newRecord, ...prev]);
-        addNotification(`ยืมสำเร็จ: ${instrument.name}`, 'success');
-      }
-    } catch (e) {
-      addNotification("เกิดข้อผิดพลาดในการทำรายการ", "error");
+    if (instrument.status === InstrumentStatus.BORROWED) {
+      // คืนเครื่อง
+      setInstruments(prev => prev.map(i => 
+        i.id === instrument.id ? { ...i, status: InstrumentStatus.AVAILABLE } : i
+      ));
+      setHistory(prev => prev.map(h => 
+        (h.instrumentId === instrument.id && h.status === 'active')
+          ? { ...h, status: 'returned', returnDate: new Date().toISOString() } : h
+      ));
+      addNotification(`คืน ${instrument.name} สำเร็จ`, 'success');
+    } else {
+      // ยืมเครื่อง
+      setInstruments(prev => prev.map(i => 
+        i.id === instrument.id ? { ...i, status: InstrumentStatus.BORROWED, lastBorrowedBy: user?.name } : i
+      ));
+      const newRecord: BorrowRecord = {
+        id: Date.now().toString(),
+        instrumentId: instrument.id,
+        instrumentName: instrument.name,
+        borrowerName: user?.name || 'User',
+        borrowDate: new Date().toISOString(),
+        status: 'active'
+      };
+      setHistory(prev => [newRecord, ...prev]);
+      addNotification(`ยืม ${instrument.name} สำเร็จ`, 'success');
     }
   };
 
-  // Loading Screen
-  if (isLoading && !user) {
+  // หน้าจอตอนกำลังโหลด
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 font-['Kanit']">
-        <LoadingBar progress={loadingProgress} isVisible={true} />
-        <div className="space-y-6 text-center">
-           <div className="bg-indigo-50 w-24 h-24 rounded-[30px] flex items-center justify-center mx-auto shadow-inner">
-              <Music className="text-indigo-600 animate-pulse" size={48} />
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
+        <div className="text-center space-y-4">
+           <div className="bg-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto shadow-lg animate-bounce">
+              <Music className="text-white" size={32} />
            </div>
-           <div className="space-y-2">
-              <h2 className="text-xl font-bold text-slate-800">MelodyManager</h2>
-              <div className="flex items-center justify-center gap-2 text-indigo-500 font-bold">
-                 <Loader2 size={16} className="animate-spin" />
-                 <span>{Math.round(loadingProgress)}%</span>
-              </div>
+           <h2 className="text-2xl font-bold text-slate-800 tracking-tight">MelodyManager</h2>
+           <div className="flex items-center justify-center gap-2 text-indigo-500 font-medium">
+             <Loader2 size={18} className="animate-spin" />
+             <span>กำลังเข้าสู่ระบบ...</span>
            </div>
         </div>
       </div>
     );
   }
 
+  // หน้า Login
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-['Kanit']">
-        <LoadingBar progress={loadingProgress} isVisible={isLoading} />
-        <div className="bg-white p-8 rounded-[32px] shadow-2xl w-full max-w-md space-y-8 border border-slate-100">
+        <div className="bg-white p-10 rounded-[40px] shadow-2xl w-full max-w-md space-y-8 border border-slate-100">
           <div className="text-center space-y-2">
-            <div className="bg-indigo-600 w-14 h-14 rounded-2xl flex items-center justify-center mx-auto shadow-lg">
-              <Music className="text-white" size={28} />
+            <div className="bg-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto shadow-xl">
+              <Music className="text-white" size={32} />
             </div>
-            <h1 className="text-2xl font-black text-slate-800 italic">MelodyManager</h1>
-            <p className="text-slate-400 text-sm">เข้าสู่ระบบเพื่อใช้งาน</p>
+            <h1 className="text-3xl font-black text-slate-800 italic pt-2">MelodyManager</h1>
+            <p className="text-slate-400 font-medium">เข้าสู่ระบบเพื่อจัดการเครื่องดนตรี</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <input type="text" defaultValue="admin" className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium" placeholder="ชื่อผู้ใช้" />
-            <input type="password" defaultValue="123456" className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium" placeholder="รหัสผ่าน" />
-            <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-indigo-100 transition-all active:scale-95">เข้าสู่ระบบ</button>
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Username</label>
+                <input type="text" defaultValue="admin" className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium mt-1" />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Password</label>
+                <input type="password" defaultValue="123456" className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium mt-1" />
+              </div>
+            </div>
+            <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-indigo-100 transition-all active:scale-95">
+              เข้าสู่ระบบ
+            </button>
           </form>
         </div>
       </div>
