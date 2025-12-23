@@ -19,15 +19,19 @@
             background-color: #f8fafc;
             margin: 0;
             padding: 0;
+            overflow-x: hidden;
         }
+        /* สถานะก่อน React โหลดเสร็จ */
         #root:empty::before {
-            content: 'กำลังโหลดระบบ...';
+            content: 'กำลังเตรียมระบบ...';
             display: flex;
             align-items: center;
             justify-content: center;
             height: 100vh;
             color: #4f46e5;
             font-weight: bold;
+            font-size: 1.2rem;
+            background: white;
         }
     </style>
     <script>

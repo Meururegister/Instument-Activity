@@ -3,30 +3,32 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 
-const startApp = () => {
-  const rootElement = document.getElementById('root');
-  if (!rootElement) {
-    console.error("Could not find root element to mount to");
-    return;
-  }
+const rootElement = document.getElementById('root');
+
+if (rootElement) {
+  const root = ReactDOM.createRoot(rootElement);
+  
+  // เพิ่มการดักจับ Error ทั่วไป
+  window.onerror = (message, source, lineno, colno, error) => {
+    console.error("Global Error:", message, error);
+    if (rootElement.innerHTML === "" || rootElement.innerHTML.includes("กำลังเตรียมระบบ")) {
+      rootElement.innerHTML = `
+        <div style="padding: 40px; text-align: center; font-family: 'Kanit', sans-serif;">
+          <h2 style="color: #ef4444;">เกิดข้อผิดพลาดในการโหลดระบบ</h2>
+          <p style="color: #64748b;">${message}</p>
+          <button onclick="window.location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 8px; cursor: pointer;">ลองใหม่อีกครั้ง</button>
+        </div>
+      `;
+    }
+  };
 
   try {
-    const root = ReactDOM.createRoot(rootElement);
     root.render(
       <React.StrictMode>
         <App />
       </React.StrictMode>
     );
-    console.log("MelodyManager initialized successfully");
-  } catch (error) {
-    console.error("Failed to render App:", error);
-    rootElement.innerHTML = `<div style="padding: 20px; color: red;">เกิดข้อผิดพลาดในการโหลดระบบ: ${error.message}</div>`;
+  } catch (err) {
+    console.error("Mounting Error:", err);
   }
-};
-
-// ตรวจสอบให้แน่ใจว่า DOM โหลดเสร็จก่อนเริ่ม
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', startApp);
-} else {
-  startApp();
 }
