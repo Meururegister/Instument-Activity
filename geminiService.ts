@@ -2,9 +2,23 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { BorrowRecord, Instrument } from "./types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// ตรวจสอบว่ามี API Key หรือไม่ก่อนสร้าง Instance
+const getAIClient = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) return null;
+  return new GoogleGenAI({ apiKey });
+};
 
 export const getAIInsights = async (history: BorrowRecord[], instruments: Instrument[]) => {
+  const ai = getAIClient();
+  if (!ai) {
+    return {
+      summary: "ระบบ AI ยังไม่พร้อมใช้งาน (กรุณาตรวจสอบ API Key)",
+      popularTypes: [],
+      recommendations: ["ตรวจสอบอุปกรณ์ตามรอบปกติ"]
+    };
+  }
+
   const prompt = `
     Analyze the following music instrument borrowing history and current inventory:
     History: ${JSON.stringify(history.slice(-20))}
