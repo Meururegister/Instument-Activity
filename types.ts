@@ -39,3 +39,11 @@ export interface DashboardStats {
   availableNow: number;
   maintenanceCount: number;
 }
+
+export type NotificationType = 'success' | 'error' | 'info' | 'warning';
+
+export interface ToastNotification {
+  id: string;
+  message: string;
+  type: NotificationType;
+}
